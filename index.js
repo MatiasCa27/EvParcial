@@ -26,11 +26,10 @@ app.get('/saludo/:nombre', (req, res) => {
 
     const nombre = req.params.nombre;
 
-    res.send(`Hola ${nombre}`);
-
+    res.send(`Hola ${nombre} bienvenido a este mundo`);
 });
 
-
+//`Hola ${nombre}, bienvenido a este mundo`
 
 // Ruta POST
 
