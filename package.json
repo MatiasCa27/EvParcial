@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+"scripts": {
+  "start": "node index.js",
+  "test": "jest"
+},
+"jest": {
+  "testEnvironment": "node"
+},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MatiasCa27/EvParcial.git"
@@ -20,5 +24,9 @@
   "homepage": "https://github.com/MatiasCa27/EvParcial#readme",
   "dependencies": {
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "supertest": "^7.2.2"
   }
 }
