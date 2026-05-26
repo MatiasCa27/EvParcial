@@ -1,18 +1,42 @@
-name: Integracion Continua
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ develop ]
+    branches:
+      - main
+      - develop
+
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  verificar:
+  pipeline:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar repositorio
-        uses: actions/checkout@v3
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
 
-      - name: Mensaje de verificacion
-        run: echo "El flujo de integracion continua funciona correctamente"
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas unitarias
+        run: npm test
+
+      - name: Escaneo de vulnerabilidades
+        run: npm audit --audit-level=high
+
+      - name: Construir imagen Docker
+        run: docker build -t evparcial-api .
+
+      - name: Despliegue automático con Docker Compose
+        run: docker compose up -d --build
+
+      - name: Verificar contenedores activos
+        run: docker ps
