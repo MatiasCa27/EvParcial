@@ -49,13 +49,16 @@ app.post('/usuario', (req, res) => {
 
 
 
-// Levantar servidor
+// Levantar servidor solo si se ejecuta directamente
 
-app.listen(3000, () => {
+if (require.main === module) {
 
-    console.log('Servidor corriendo en localhost:3000');
+    app.listen(3000, () => {
 
-})
+        console.log('Servidor corriendo en localhost:3000');
+
+    });
+
+}
 
 module.exports = app;
-;
