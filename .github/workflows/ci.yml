@@ -29,8 +29,18 @@ jobs:
       - name: Ejecutar pruebas unitarias
         run: npm test
 
-      - name: Escaneo de vulnerabilidades
+      - name: Escaneo de vulnerabilidades con npm audit
         run: npm audit --audit-level=high
+
+      - name: Análisis con SonarCloud
+        uses: SonarSource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Escaneo de seguridad con Snyk
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       - name: Construir imagen Docker
         run: docker build -t evparcial-api .
