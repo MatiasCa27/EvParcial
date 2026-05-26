@@ -36,6 +36,12 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=MatiasCa27_EvParcial
+            -Dsonar.organization=matiasca27
+            -Dsonar.sources=.
+            -Dsonar.exclusions=node_modules/**
 
       - name: Escaneo de seguridad con Snyk
         uses: snyk/actions/node@master
