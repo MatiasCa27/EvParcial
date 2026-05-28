@@ -51,8 +51,9 @@ app.post('/usuario', (req, res) => {
 
 // Levantar servidor
 
-app.listen(3000, () => {
-
+if (require.main === module) {
+  app.listen(3000, () => {
     console.log('Servidor corriendo en localhost:3000');
-
-});
+  });
+}
+module.exports = app;
