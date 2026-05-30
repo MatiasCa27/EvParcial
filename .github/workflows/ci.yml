@@ -2,21 +2,18 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
-      - develop
-
+    branches: [main, develop]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  pipeline:
-    runs-on: ubuntu-latest
 
+  
+  security:
+    name: Seguridad (Snyk + npm audit)
+    runs-on: ubuntu-latest
     steps:
-      - name: Descargar repositorio
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -26,13 +23,62 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Ejecutar pruebas unitarias
-        run: npm test
-
-      - name: Escaneo de vulnerabilidades con npm audit
+    
+      - name: npm audit (bloqueo en HIGH)
         run: npm audit --audit-level=high
 
-      - name: Análisis con SonarCloud
+      - name: Snyk Security Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+     
+      - name: Generar reporte Snyk
+        if: always()
+        run: |
+          npx snyk test --json > snyk-report.json || echo "Snyk encontró vulnerabilidades"
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
+
+
+      - name: Subir reporte de seguridad
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-security-report
+          path: snyk-report.json
+
+
+      - name: Alerta si npm audit falla
+        if: failure()
+        run: |
+          echo "::error::El pipeline fue BLOQUEADO por vulnerabilidades de seguridad."
+          echo "::error::Revisa el artefacto snyk-security-report para ver el detalle."
+          exit 1
+
+  
+  test:
+    name: Pruebas Unitarias
+    runs-on: ubuntu-latest
+    needs: security        
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - run: npm ci
+      - run: npm test
+
+  sonar:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -43,16 +89,16 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.exclusions=node_modules/**
 
-      - name: Escaneo de seguridad con Snyk
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
+  build:
+    name: Build y Despliegue
+    runs-on: ubuntu-latest
+    needs: sonar
+    steps:
+      - uses: actions/checkout@v4
       - name: Construir imagen Docker
         run: docker build -t evparcial-api .
-
-      - name: Despliegue automático con Docker Compose
+      - name: Despliegue con Docker Compose
         run: docker compose up -d --build
-
-      - name: Verificar contenedores activos
+      - name: Verificar contenedores
         run: docker ps

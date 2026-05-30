@@ -1,73 +1,118 @@
-# EvParcial
+# EvParcial — API Node.js con Pipeline CI/CD
 
-Hemos decidido implementar **GitFlow** para este proyecto. 
+## Descripción del proyecto
 
-**Justificación:** GitFlow nos permite tener un entorno de desarrollo seguro colaborativo. Al separar el código estable en `main`, el código en integración en `develop`, y trabajar las nuevas funcionalidades en ramas `feature/`, evitamos romper el trabajo del otro compañero. Además, el uso de ramas `hotfix/` nos da agilidad para solucionar errores críticos en producción sin interferir con el desarrollo diario.
+API REST construida con Express.js que expone tres endpoints:
+- `GET /` → mensaje de bienvenida
+- `GET /saludo/:nombre` → saludo personalizado
+- `POST /usuario` → creación de usuario con datos JSON
 
-Estructura de ramas
-main: contiene la versión estable del proyecto
-develop: contiene los cambios en desarrollo
-feature/*: nuevas funcionalidades
-fix/*: corrección de errores detectados durante el desarrollo
-hotfix/*: correcciones urgentes en producción
+---
 
-Funcionalidades implementadas
+## Estrategia de ramas (GitFlow)
 
-Feature 1:
-Mejora en el endpoint /saludo/:nombre, permitiendo personalizar el mensaje de bienvenida.
+| Rama | Propósito |
+|------|-----------|
+| `main` | Código estable en producción |
+| `develop` | Integración de funcionalidades |
+| `feature/*` | Nuevas funcionalidades |
+| `fix/*` | Corrección de errores en desarrollo |
+| `hotfix/*` | Correcciones urgentes en producción |
 
-Feature 2:
-Mejora del mensaje principal en la ruta /, agregando una versión más descriptiva.
+---
 
-Fix:
-Corrección de errores en la funcionalidad de saludo donde los cambios no se reflejaban correctamente.
+## Pipeline CI/CD — GitHub Actions
 
-Hotfix:
-Actualización del mensaje principal en producción para mejorar la salida final del sistema.
+El pipeline se encuentra en `.github/workflows/ci.yml` y se ejecuta en cada push a `main` o `develop` y en cada Pull Request hacia `main`.
 
-Convenciones de commits
+### Flujo de ejecución 
+Si cualquier job falla, todos los siguientes se cancelan automáticamente.
 
-Se utilizan mensajes estructurados para identificar los cambios:
+### Job 1: `security` — Análisis de seguridad
+- **npm audit** escanea dependencias con vulnerabilidades conocidas. Bloquea el pipeline si encuentra severidad `high` o superior.
+- **Snyk** realiza un análisis SCA (Software Composition Analysis) sobre las dependencias del proyecto. Bloquea si detecta vulnerabilidades `high` o `critical`.
+- El reporte de Snyk se sube como artefacto descargable (`snyk-security-report`) incluso si el job falla, garantizando trazabilidad del análisis.
+- Si el job falla, se emite un mensaje de error explícito visible en GitHub Actions.
 
-feat: nueva funcionalidad
-fix: corrección de errores
+### Job 2: `test` — Pruebas unitarias
+- Solo se ejecuta si `security` pasó exitosamente (`needs: security`).
+- Corre `npm test` usando Jest como framework de pruebas.
 
-Ejemplos:
+### Job 3: `sonar` — Análisis de calidad estática (SAST)
+- Solo se ejecuta si `test` pasó.
+- SonarCloud analiza el código fuente en busca de bugs, code smells y problemas de seguridad en el código propio.
+- Requiere el secret `SONAR_TOKEN` configurado en el repositorio.
 
-feat: mejora saludo principal
-fix: corrige error en endpoint de saludo
+### Job 4: `build` — Construcción y despliegue
+- Solo se ejecuta si `sonar` pasó.
+- Construye la imagen Docker usando un Dockerfile multi-stage.
+- Levanta los servicios con Docker Compose.
 
-Naming de ramas
+---
 
-Se sigue una estructura basada en GitFlow:
+## Cómo se garantiza la trazabilidad y calidad
 
-feature/nombre-descriptivo
-fix/nombre-del-error
-hotfix/nombre-del-arreglo
+### Trazabilidad
+- **Artefactos descargables**: el reporte de Snyk se almacena como artefacto en cada ejecución del pipeline, permitiendo auditar el estado de seguridad en cualquier punto de la historia.
+- **Jobs encadenados con `needs`**: el orden explícito de ejecución asegura que ninguna etapa avance sin que la anterior haya sido validada.
+- **Convención de commits**: todos los commits siguen el formato `feat:`, `fix:`, `hotfix:`, lo que permite rastrear el propósito de cada cambio.
+- **Pull Requests obligatorios**: todo cambio hacia `develop` o `main` pasa por revisión antes del merge.
 
-Ejemplos:
+### Calidad
+- **Seguridad antes que todo** (shift-left security): el análisis de vulnerabilidades es el primer job, bloqueando el pipeline antes de que código inseguro llegue a producción.
+- **SCA con Snyk**: detecta vulnerabilidades en dependencias de terceros (librerías npm).
+- **SAST con SonarCloud**: detecta problemas en el código propio sin ejecutarlo.
+- **Pruebas unitarias con Jest**: validan el comportamiento esperado de la aplicación.
+- **Docker multi-stage**: la imagen de producción solo contiene lo necesario, reduciendo la superficie de ataque.
 
-feature/mejora-hola-principal
-fix/error-saludo
-hotfix/mensaje-final
+---
 
-Flujo de trabajo
-Se crea una rama desde develop para nuevas funcionalidades.
-Se desarrollan los cambios en la rama feature/.
-Se crea un Pull Request hacia develop.
-Se revisa el código y se realiza el merge.
-Para errores, se utiliza una rama fix/ basada en la feature correspondiente.
-Para errores críticos, se crea una rama hotfix/ desde main y se mergea directamente a esta.
+## Orquestación con Docker Compose
 
-Estrategia de revisión
-Todos los cambios se realizan mediante Pull Request.
-Se verifica el funcionamiento del código antes de hacer merge.
-Se prueban los endpoints en navegador o herramientas como Postman.
-Se asegura que el código esté estable antes de integrarlo en develop o main.
+El archivo `docker-compose.yml` define dos servicios:
 
-GitHub Actions
+| Servicio | Imagen | Puerto | Descripción |
+|----------|--------|--------|-------------|
+| `db` | mysql:8.0 | 3306 | Base de datos MySQL |
+| `api` | build local | 3000 | API Node.js |
 
-Se configuró una acción automática que se ejecuta en:
+### Características de la orquestación
+- **Healthcheck en MySQL**: la API no inicia hasta que MySQL esté aceptando conexiones (`condition: service_healthy`), evitando errores de conexión al arrancar.
+- **Red interna** (`evparcial-network`): los servicios se comunican entre sí por nombre sin exponer puertos internos al exterior innecesariamente.
+- **Volumen persistente** (`db_data`): los datos de MySQL sobreviven al reinicio de los contenedores.
+- **Límites de recursos**: cada servicio tiene límites de CPU y memoria para evitar que un contenedor consuma todos los recursos del host.
+- **Restart policy**: `unless-stopped` reinicia la API automáticamente si falla.
 
-Cada push a la rama develop
-Cada Pull Request hacia main
+### Comandos principales
+
+```bash
+# Levantar el stack completo
+docker compose up -d --build
+
+# Ver estado de los contenedores y healthcheck
+docker compose ps
+
+# Ver logs en tiempo real
+docker compose logs -f api
+
+# Detener sin eliminar datos
+docker compose down
+
+# Detener y eliminar volúmenes
+docker compose down -v
+```
+
+---
+
+## Secrets requeridos en GitHub
+
+Configúralos en Settings → Secrets and variables → Actions:
+
+| Secret | Descripción | Dónde obtenerlo |
+|--------|-------------|-----------------|
+| `SNYK_TOKEN` | Token de autenticación de Snyk | [app.snyk.io/account](https://app.snyk.io/account) |
+| `SONAR_TOKEN` | Token de SonarCloud | [sonarcloud.io/account/security](https://sonarcloud.io/account/security) |
+
+---
+
+## Estructura del proyecto

@@ -1,9 +1,80 @@
 version: '3.8'
 
 services:
+
+
+  db:
+    image: mysql:8.0
+    container_name: evparcial-db
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: evparcial_db
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - evparcial-network
+ 
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: evparcial-api
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=evparcial_db
+      - DB_USER=appuser
+      - DB_PASSWORD=apppassword
+    networks:
+      - evparcial-network
+   
+    depends_on:
+      db:
+        condition: service_healthy
+
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.5"
+ 
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+
+networks:
+  evparcial-network:
+    driver: bridge
+
+
+volumes:
+  db_data:
