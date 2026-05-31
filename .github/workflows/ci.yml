@@ -43,7 +43,7 @@ jobs:
 
       - name: Subir reporte de seguridad
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: snyk-security-report
           path: snyk-report.json
