@@ -105,6 +105,10 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
+      - name: Limpiar contenedores anteriores
+        run: docker compose down -v
+        continue-on-error: true
+
       - name: Construir imagen Docker
         run: docker build -t evparcial-api .
 
