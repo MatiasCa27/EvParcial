@@ -15,12 +15,6 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - evparcial-network
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 60s
     restart: unless-stopped
     deploy:
       resources:
@@ -48,8 +42,7 @@ services:
     networks:
       - evparcial-network
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     restart: unless-stopped
     deploy:
       resources:
