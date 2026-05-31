@@ -84,16 +84,14 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      - name: SonarCloud Scan
+      - name: SonarCloud Scan con Quality Gate
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Validar Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
 
   build:
     name: Build y Despliegue
