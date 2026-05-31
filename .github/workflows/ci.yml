@@ -1,0 +1,130 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  security:
+    name: Seguridad (Snyk + npm audit)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: npm audit bloqueo en HIGH
+        run: npm audit --audit-level=high
+
+      - name: Snyk Security Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Generar reporte Snyk
+        if: always()
+        run: |
+          npx snyk test --json > snyk-report.json || echo "Snyk encontró vulnerabilidades"
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
+
+      - name: Subir reporte de seguridad
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-security-report
+          path: snyk-report.json
+
+      - name: Alerta si seguridad falla
+        if: failure()
+        run: |
+          echo "::error::El pipeline fue BLOQUEADO por vulnerabilidades de seguridad."
+          echo "::error::Revisa npm audit, Snyk y el artefacto snyk-security-report."
+          exit 1
+
+  test:
+    name: Pruebas Unitarias
+    runs-on: ubuntu-latest
+    needs: security
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
+
+  sonar:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=MatiasCa27_EvParcial
+            -Dsonar.organization=matiasca27
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.sources=.
+            -Dsonar.exclusions=node_modules/**
+
+  build:
+    name: Build y Despliegue Local
+    runs-on: [self-hosted, Windows, X64, local, docker]
+    needs: sonar
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Limpiar contenedores anteriores
+        run: docker compose down -v
+        continue-on-error: true
+
+      - name: Construir imagen Docker
+        run: docker build -t evparcial-api .
+
+      - name: Despliegue local con Docker Compose
+        run: docker compose up -d --build
+
+      - name: Verificar contenedores
+        run: docker ps
+
+      - name: Esperar API
+        shell: powershell
+        run: Start-Sleep -Seconds 40
+
+      - name: Probar API desplegada
+        shell: powershell
+        run: curl.exe -f http://localhost:3000/
+
+      - name: Confirmar despliegue local
+        run: echo "La aplicacion quedo desplegada localmente con Docker Compose en el self-hosted runner."
