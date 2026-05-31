@@ -12,7 +12,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -22,7 +23,7 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: npm audit (bloqueo en HIGH)
+      - name: npm audit bloqueo en HIGH
         run: npm audit --audit-level=high
 
       - name: Snyk Security Scan
@@ -60,7 +61,8 @@ jobs:
     needs: security
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
@@ -79,28 +81,15 @@ jobs:
     needs: test
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=MatiasCa27_EvParcial
-            -Dsonar.organization=matiasca27
-            -Dsonar.sources=.
-            -Dsonar.exclusions=node_modules/**
 
-  quality-gate:
-    name: Validar Quality Gate
-    runs-on: ubuntu-latest
-    needs: sonar
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Esperar resultado Quality Gate
+      - name: Validar Quality Gate
         uses: SonarSource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         env:
@@ -109,10 +98,11 @@ jobs:
   build:
     name: Build y Despliegue
     runs-on: ubuntu-latest
-    needs: quality-gate
+    needs: sonar
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
 
       - name: Construir imagen Docker
         run: docker build -t evparcial-api .
