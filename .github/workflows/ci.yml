@@ -97,8 +97,8 @@ jobs:
             -Dsonar.exclusions=node_modules/**
 
   build:
-    name: Build y Despliegue
-    runs-on: ubuntu-latest
+    name: Build y Despliegue Local
+    runs-on: [self-hosted, Windows, X64, local, docker]
     needs: sonar
 
     steps:
@@ -108,18 +108,19 @@ jobs:
       - name: Construir imagen Docker
         run: docker build -t evparcial-api .
 
-      - name: Despliegue con Docker Compose
+      - name: Despliegue local con Docker Compose
         run: docker compose up -d --build
 
       - name: Verificar contenedores
         run: docker ps
 
       - name: Esperar API
-        run: sleep 20
+        shell: powershell
+        run: Start-Sleep -Seconds 20
 
       - name: Probar API desplegada
-        run: curl http://localhost:3000/
+        shell: powershell
+        run: Invoke-WebRequest http://localhost:3000/
 
-      - name: Apagar contenedores
-        if: always()
-        run: docker compose down
+      - name: Confirmar despliegue local
+        run: echo "La aplicacion quedo desplegada localmente con Docker Compose en el self-hosted runner."
