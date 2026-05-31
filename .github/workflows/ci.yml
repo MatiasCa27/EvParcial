@@ -120,11 +120,11 @@ jobs:
 
       - name: Esperar API
         shell: powershell
-        run: Start-Sleep -Seconds 20
+        run: Start-Sleep -Seconds 40
 
       - name: Probar API desplegada
         shell: powershell
-        run: Invoke-WebRequest http://localhost:3000/
+        run: curl.exe -f http://localhost:3000/
 
       - name: Confirmar despliegue local
         run: echo "La aplicacion quedo desplegada localmente con Docker Compose en el self-hosted runner."
