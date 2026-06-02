@@ -13,7 +13,7 @@ app.use(express.json());
 
 app.get('/', (req, res) => {
 
-    res.send('Hola mundo 🌍 - version final test 1');
+    res.send('Hola mundo 🌍 - version final test 2');
 
 });
 
