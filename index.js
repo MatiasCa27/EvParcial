@@ -9,12 +9,11 @@ const app = express();
 app.use(express.json());
 
 
-
 // Ruta GET básica
 
 app.get('/', (req, res) => {
 
-    res.send('Hola mundo 🌍 - version final');
+    res.send('Hola mundo 🌍 - version final test 1');
 
 });
 
