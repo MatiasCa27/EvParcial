@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-"scripts": {
-  "start": "node index.js",
-  "test": "jest"
-},
-"jest": {
-  "testEnvironment": "node"
-},
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MatiasCa27/EvParcial.git"
@@ -23,7 +23,10 @@
   },
   "homepage": "https://github.com/MatiasCa27/EvParcial#readme",
   "dependencies": {
-    "express": "^5.2.1"
+    "@aws-sdk/client-cloudwatch-logs": "^3.1075.0",
+    "express": "^5.2.1",
+    "winston": "^3.19.0",
+    "winston-cloudwatch": "^6.3.0"
   },
   "devDependencies": {
     "jest": "^30.4.2",
