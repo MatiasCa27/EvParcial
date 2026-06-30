@@ -23,10 +23,8 @@
   },
   "homepage": "https://github.com/MatiasCa27/EvParcial#readme",
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.1075.0",
     "express": "^5.2.1",
-    "winston": "^3.19.0",
-    "winston-cloudwatch": "^6.3.0"
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "jest": "^30.4.2",
