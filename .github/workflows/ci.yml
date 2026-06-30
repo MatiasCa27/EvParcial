@@ -96,35 +96,21 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.exclusions=node_modules/**
 
-  build:
-    name: Build y Despliegue Local
-    runs-on: [self-hosted, Windows, X64, local, docker]
+  deploy:
+    name: Deploy to AWS EC2
+    runs-on: ubuntu-latest
     needs: sonar
 
     steps:
-      - name: Descargar repositorio
-        uses: actions/checkout@v4
-
-      - name: Limpiar contenedores anteriores
-        run: docker compose down -v
-        continue-on-error: true
-
-      - name: Construir imagen Docker
-        run: docker build -t evparcial-api .
-
-      - name: Despliegue local con Docker Compose
-        run: docker compose up -d --build
-
-      - name: Verificar contenedores
-        run: docker ps
-
-      - name: Esperar API
-        shell: powershell
-        run: Start-Sleep -Seconds 40
-
-      - name: Probar API desplegada
-        shell: powershell
-        run: curl.exe -f http://localhost:3000/
-
-      - name: Confirmar despliegue local
-        run: echo "La aplicacion quedo desplegada localmente con Docker Compose en el self-hosted runner."
+      - name: Desplegar en AWS EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/EvParcial
+            git pull
+            docker compose down
+            docker compose up -d --build
+            docker ps
