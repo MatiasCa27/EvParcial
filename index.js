@@ -27,7 +27,7 @@ app.use((req, res, next) => {
 // Ruta GET básica
 app.get('/', (req, res) => {
 
-    res.send('Hola mundo 🌍 - version final test 11');
+    res.send('Hola mundo 🌍 - version final test 12');
 
 });
 
